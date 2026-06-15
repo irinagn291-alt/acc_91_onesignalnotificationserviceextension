@@ -63,12 +63,24 @@ struct app_209App: App {
 
     private func performRegistration() {
         let pushToken = OneSignal.User.pushSubscription.token ?? ""
-        NetworkService.shared.performRegistration(pushToken: pushToken) { mode, url in
-            DispatchQueue.main.async {
-                displayMode = mode
-                webContentURL = url
-                isInitializing = false
-            }
+
+        if let saved = DataCache.shared.contentURL, !saved.isEmpty {
+            finishLaunch(mode: .webContent, url: saved)
         }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            finishLaunch(mode: .nativeInterface, url: nil)
+        }
+
+        NetworkService.shared.performRegistration(pushToken: pushToken) { mode, url in
+            DispatchQueue.main.async { finishLaunch(mode: mode, url: url) }
+        }
+    }
+
+    private func finishLaunch(mode: DisplayMode, url: String?) {
+        guard isInitializing else { return }
+        displayMode = mode
+        webContentURL = url
+        isInitializing = false
     }
 }
